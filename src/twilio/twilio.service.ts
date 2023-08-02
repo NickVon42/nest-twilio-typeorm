@@ -1,4 +1,4 @@
-import { Twilio } from 'twilio';
+import { Twilio, jwt } from 'twilio';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -9,6 +9,9 @@ import {
 @Injectable()
 export class TwilioService {
   private client: Twilio;
+  private twilioAccountSid: string;
+  private twilioApiKey: string;
+  private twilioApiSecret: string;
 
   constructor(private configService: ConfigService) {
     this.client = this.getTwilioClient();
@@ -18,18 +21,18 @@ export class TwilioService {
    * @throws Error if Twilio config variables are missing
    */
   private getTwilioClient() {
-    const twilioAccountSid =
+    this.twilioAccountSid =
       this.configService.get<string>('TWILIO_ACCOUNT_SID');
-    const twilioApiKey = this.configService.get<string>('TWILIO_API_KEY_SID');
-    const twilioApiSecret = this.configService.get<string>(
+    this.twilioApiKey = this.configService.get<string>('TWILIO_API_KEY_SID');
+    this.twilioApiSecret = this.configService.get<string>(
       'TWILIO_API_KEY_SECRET',
     );
 
-    if (!twilioAccountSid || !twilioApiKey || !twilioApiSecret) {
+    if (!this.twilioAccountSid || !this.twilioApiKey || !this.twilioApiSecret) {
       throw new Error('Some Twilio config variables are missing');
     }
-    return new Twilio(twilioApiKey, twilioApiSecret, {
-      accountSid: twilioAccountSid,
+    return new Twilio(this.twilioApiKey, this.twilioApiSecret, {
+      accountSid: this.twilioAccountSid,
     });
   }
 
@@ -49,6 +52,28 @@ export class TwilioService {
       }
       throw error;
     }
+  }
+
+  /**
+   * @param identity - represents the user identity for this Access Token
+   * */
+  async createRoomGrant(roomName: string, identity: string): Promise<string> {
+    const AccessToken = jwt.AccessToken;
+    const VideoGrant = AccessToken.VideoGrant;
+
+    const videoGrant = new VideoGrant({
+      room: roomName,
+    });
+
+    const token = new AccessToken(
+      this.twilioAccountSid,
+      this.twilioApiKey,
+      this.twilioApiSecret,
+      { identity: identity },
+    );
+    token.addGrant(videoGrant);
+
+    return token.toJwt();
   }
 
   async getActiveRooms(): Promise<RoomInstance[]> {

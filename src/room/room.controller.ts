@@ -1,29 +1,32 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param } from '@nestjs/common';
 import { RoomService } from './room.service';
-import { RoomInstance } from 'twilio/lib/rest/video/v1/room';
-import { Room } from './room.entity';
+import { ScheduleRoomDto } from './dto/ScheduleRoomDto';
 
 @Controller('rooms')
 export class RoomController {
   constructor(private roomService: RoomService) {}
 
-  @Post('create/:name')
-  async createGroupRoom(@Param('name') name: string): Promise<RoomInstance> {
-    return await this.roomService.createGroupRoom(name);
+  @Post('schedule')
+  async scheduleRoom(
+    @Body() scheduleRoomDto: ScheduleRoomDto,
+  ): Promise<string> {
+    const room = await this.roomService.scheduleRoom(scheduleRoomDto);
+    return room.roomId;
   }
 
-  @Post('schedule/:name')
-  async scheduleRoom(@Param('name') name: string): Promise<Room> {
-    return await this.roomService.scheduleAGroupRoom(name);
+  @Get(':roomId/users/:userId')
+  async authoriseUserForRoom(
+    @Param('roomId') roomId: string,
+    @Param('userId') userId: string,
+  ): Promise<string> {
+    const room = await this.roomService.getRoomIfAccessible(roomId);
+    return await this.roomService.authoriseUserAndGetToken(room, userId);
   }
 
-  @Get('scheduled')
-  async getScheduledRooms(): Promise<Room[]> {
-    return await this.roomService.findAll();
-  }
-
-  @Get('/')
-  async getActiveRooms(): Promise<RoomInstance[]> {
-    return await this.roomService.getActiveRooms();
+  // WIP (needs to be public url before it can work)
+  @Get('status')
+  async twilioStatusCallback(args: any): Promise<any> {
+    console.log(args);
+    return args;
   }
 }

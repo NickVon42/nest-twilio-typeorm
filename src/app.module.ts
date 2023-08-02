@@ -4,6 +4,7 @@ import { RoomModule } from './room/room.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Room } from './room/room.entity';
+import { Participant } from './participant/participant.entity';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { Room } from './room/room.entity';
         username: configService.get<string>('POSTGRES_USER'),
         password: configService.get<string>('POSTGRES_PASSWORD'),
         database: configService.get<string>('POSTGRES_DB'),
-        entities: [Room],
+        entities: [Room, Participant],
         synchronize: process.env.NODE_ENV !== 'production',
       }),
     }),
